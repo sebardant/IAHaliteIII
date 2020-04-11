@@ -4,8 +4,35 @@
 #include "map_cell.hpp"
 
 #include <vector>
+#include <memory>
+#include <map>
+
+
+using namespace std;
 
 namespace hlt {
+
+
+	typedef std::vector<std::vector<int>> VVI;
+	typedef std::vector<std::vector<int>> VVI;
+	typedef std::vector<std::vector<Position>> VVP;
+
+	struct BFSR {
+		VVI dist;
+		VVP parent;
+		VVI turns;
+	};
+
+	typedef std::pair<Position, double> MyPairType;
+	struct CompareSecond
+	{
+		bool operator()(const MyPairType& left, const MyPairType& right) const
+		{
+			return left.second < right.second;
+		}
+
+	};
+
     struct GameMap {
         int width;
         int height;
@@ -86,7 +113,52 @@ namespace hlt {
             return Direction::STILL;
         }
 
+
+
+		double GameMap::costfn(Ship *s, int to_cost, Position shipyard, Position dest, bool is_1v1) {
+
+			if (dest == shipyard) return 10000000;
+
+			int halite = at(dest)->halite;
+			int turns_to = calculate_distance(s->position, dest);
+			int turns_back = calculate_distance(dest, shipyard);
+
+			int turns = fmax(1.0, turns_to + turns_back);
+			if (!is_1v1) {
+				turns = turns_to + turns_back;
+			}
+
+			int curr_hal = s->halite;
+			double out = -1000;
+			int mined = 0;
+			for (int i = 0; i < 5; i++) {
+				mined += halite * 0.25;
+				halite *= 0.75;
+				if (mined + curr_hal > 1000) {
+					mined = 1000 - curr_hal;
+				}
+				int c = std::max(0, mined - to_cost);
+				double cout = (c) / ((double)1 + turns + i);
+				out = std::max(cout, out);
+			}
+
+			return out;
+		}
+
+
+		pair<Position, double> GameMap::getMin(map<Position, double> mymap)
+		{
+			pair<Position, double> min
+				= *min_element(mymap.begin(), mymap.end(), CompareSecond());
+			return min;
+		}
+		
+		
+
+		BFSR BFS(Position source, bool collide = false, int starting_hal = 0);
+
         void _update();
         static std::unique_ptr<GameMap> _generate();
     };
 }
+

@@ -33,4 +33,11 @@ namespace hlt {
 
         static std::shared_ptr<Ship> _generate(PlayerId player_id);
     };
+
+	enum ShipState {
+		GATHERING,
+		RETURNING,
+		SUPER_RETURN,
+		DROPOFF,
+	};
 }
