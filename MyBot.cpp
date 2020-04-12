@@ -21,9 +21,21 @@ int main(int argc, char* argv[]) {
     mt19937 rng(rng_seed);
 
     Game game;
+	log::log("BLAH");
+	int initialHalite = 0;
     // At this point "game" variable is populated with initial map data.
     // This is a good place to do computationally expensive start-up pre-processing.
     // As soon as you call "ready" function below, the 2 second per turn timer will start.
+	for (int i = 0; i < game.game_map->height; i++)
+		{
+			for (int j = 0; j < game.game_map->width; j++)
+			{
+				MapCell cell = game.game_map->cells[i][j];
+				initialHalite += cell.halite;
+			}
+			
+		}
+	log::log("HALITE DE DEPART : ");
     game.ready("MyCppBot");
 	map<EntityId, ShipState> stateMp;
 	map<EntityId, Position> objectives;
@@ -131,10 +143,34 @@ int main(int argc, char* argv[]) {
 			}
         }
 		
+		//tweakable parameter
+		int x = 0.1;
+		int y = 2;
+
+		//calcule le nombre de vaisseau et d'halite sur la map
+		int thisTurnShips = 1;
+		int thisTurnHalite = 0;
+
+		for (int i = 0; i < game_map->height; i++)
+		{
+			for (int j = 0; j < game_map->width; j++)
+			{
+				MapCell cell = game_map->cells[i][j];
+				if (cell.is_occupied()) {
+					thisTurnShips += 1;
+				}
+				thisTurnHalite += cell.halite;
+			}
+			
+		}
+		
+
         if (
             game.turn_number <= 200 &&
             me->halite >= constants::SHIP_COST &&
-            !game_map->at(me->shipyard)->is_occupied())
+            !game_map->at(me->shipyard)->is_occupied() &&
+			(y * (thisTurnHalite - x * initialHalite) / thisTurnShips > constants::SHIP_COST)
+			)
         {
             command_queue.push_back(me->shipyard->spawn());
         }
