@@ -115,7 +115,7 @@ namespace hlt {
 
 
 
-		double GameMap::costfn(Ship *s, int to_cost, Position shipyard, Position dest, bool is_1v1) {
+		/*double GameMap::costfn(Ship *s, int to_cost, Position shipyard, Position dest, bool is_1v1) {
 
 			if (dest == shipyard) return 10000000;
 
@@ -143,6 +143,22 @@ namespace hlt {
 			}
 
 			return out;
+		}*/
+
+		double GameMap::costfn(Ship *s, int to_cost,Position shipyard, Position dest, bool is_1v1) {
+
+			if (dest == shipyard) return 10000000;
+
+			int halite = at(dest)->halite;
+			int turns_to = calculate_distance(s->position, dest);
+			int turns_back = calculate_distance(dest, shipyard);
+
+			int turns = fmax(1.0, turns_to + turns_back);
+			if (!is_1v1) {
+				turns = turns_to + turns_back;
+			}
+
+			return halite / turns;
 		}
 
 

@@ -36,6 +36,7 @@ namespace hlt {
 
 	enum ShipState {
 		GATHERING,
+		STILL,
 		RETURNING,
 		SUPER_RETURN,
 		DROPOFF,

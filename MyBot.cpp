@@ -49,31 +49,32 @@ int main(int argc, char* argv[]) {
 		
 		ship_to_dist.clear();//On clear a chaque tour 
 
-		for (auto s : me->ships) {//On va remplir pour tout les ship les différentes infos de cout de toute les cases 
-			ship_to_dist[s.second->position] = game_map->BFS(s.second->position);
-		}
+	
 
         for (const auto& ship_iterator : me->ships) {
 			scoreCases.clear();
             shared_ptr<Ship> ship = ship_iterator.second;
+			ship_to_dist[ship->position] = game_map->BFS(ship->position);
 			EntityId id = ship->id;
 			bool justChange = false;
-			bool still = false;
-			bool arrived = ship->position == objectives[id];
 			
 			if (!stateMp.count(id)) {
 				stateMp[id] = GATHERING;
 				justChange = true;
 			}
 
-			/*if (ship->halite >= constants::MAX_HALITE * 0.90) {
-				stateMp[id] = RETURNING;
+			if(ship->position == objectives[id]) {
+				stateMp[id] = STILL;
+			}
+
+			if (stateMp[id] == STILL && game_map->at(ship->position)->halite == 0) {
+				stateMp[id] = GATHERING;
 				justChange = true;
-				objectives[id] = me->shipyard->position;
-			}*/
-			if (arrived && game_map->at(ship->position)->halite == 0) {
+			}
+
+			if (ship->halite >= constants::MAX_HALITE * 0.90) {
 				stateMp[id] = RETURNING;
-				justChange = true;
+				usedAsObjectiv[objectives[id]] = false;
 				objectives[id] = me->shipyard->position;
 			}
 
@@ -81,73 +82,63 @@ int main(int argc, char* argv[]) {
 				stateMp[id] = GATHERING;
 				justChange = true;
 			}
+			map<Position, BFSR> &greedy_bfs = ship_to_dist;
 
 			switch (stateMp[id])
 			{
 				case GATHERING:
 				{
-					if (arrived) {
-						still = true;
-						if (game_map->at(ship->position)->halite == 0) {
-							justChange = true;
-						}
-					}
-
 					if (justChange) {
-						for (int i = 0; i < game_map->cells.size(); i++)
+						VVI &dist = greedy_bfs[ship->position].dist;
+						for (int i = 0; i < game_map->width; i++)
 						{
-							for (int y = 0; y < game_map->cells[i].size(); y++) {
-								scoreCases[game_map->cells[i][y].position] = game_map->costfn(ship.get(), ship_to_dist[ship->position].dist[game_map->cells[i][y].position.x][game_map->cells[i][y].position.y], me->shipyard->position, game_map->cells[i][y].position, true);
+							for (int y = 0; y < game_map->height; y++) {
+								auto dest = Position(i, y);
+								int net_cost_to = dist[dest.x][dest.y];
+
+								scoreCases[dest] = game_map->costfn(ship.get(), net_cost_to, me->shipyard->position, dest, true);
 							}
 						}
 						bool good = false;
-						pair<Position, double> min;
+						Position goodPos = Position(0,0);
 						while (!good)
 						{
-							min = game_map->getMin(scoreCases);
-							if (usedAsObjectiv[min.first] == false) {
+							auto x = std::max_element(scoreCases.begin(), scoreCases.end(),
+								[](const pair<Position, double>& p1, const pair<Position, double>& p2) {
+								return p1.second < p2.second; });
+							if (usedAsObjectiv[x->first] == false) {
+								goodPos = x->first;
 								good = true;
 							}
 							else {
-								scoreCases.erase(min.first);
+								scoreCases.erase(x->first);
 							}
 						}
-						objectives[id] = min.first;
+						usedAsObjectiv[goodPos] = true;
+						objectives[id] = goodPos;
+						
 						justChange = false;
-						still = false;
-						arrived = false;
 					}
+					command_queue.push_back(ship->move(game_map->naive_navigate(ship, objectives[id])));
 				}
 				break;
-			}
-
-			if (ship->halite < game_map->at(ship->position)->halite * 0.10) {
-				still = true;
-			}
-			else {
-				still = false;
-			}
-
-			if (still) {
-				command_queue.push_back(ship->stay_still());
-			}
-			else {
-				command_queue.push_back(ship->move(game_map->naive_navigate(ship, objectives[id])));
+				case STILL:
+					command_queue.push_back(ship->stay_still());
+					break;
+				case RETURNING:
+					command_queue.push_back(ship->move(game_map->naive_navigate(ship, objectives[id])));
+					break;
 			}
         }
 		
-        /*if (
+        if (
             game.turn_number <= 200 &&
             me->halite >= constants::SHIP_COST &&
             !game_map->at(me->shipyard)->is_occupied())
         {
             command_queue.push_back(me->shipyard->spawn());
-        }*/
-		if (
-			game.turn_number <= 1)
-		{
-			command_queue.push_back(me->shipyard->spawn());
-		}
+        }
+	
 
         if (!game.end_turn(command_queue)) {
             break;
@@ -158,3 +149,21 @@ int main(int argc, char* argv[]) {
 }
 
 
+/*
+bool good = false;
+						pair<Position, double> min;
+
+						objectives[id] = min.first;
+while (!good)
+						{
+							min = game_map->getMin(scoreCases);
+							if (usedAsObjectiv[min.first] == false) {
+								good = true;
+							}
+							else {
+								scoreCases.erase(min.first);
+							}
+						}
+
+
+*/
