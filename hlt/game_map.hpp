@@ -115,7 +115,7 @@ namespace hlt {
 
 
 
-		/*double GameMap::costfn(Ship *s, int to_cost, Position shipyard, Position dest, bool is_1v1) {
+		double GameMap::costfn(Ship *s, int to_cost, Position shipyard, Position dest, bool is_1v1) {
 
 			if (dest == shipyard) return 10000000;
 
@@ -143,9 +143,9 @@ namespace hlt {
 			}
 
 			return out;
-		}*/
+		}
 
-		double GameMap::costfn(Ship *s, int to_cost,Position shipyard, Position dest, bool is_1v1) {
+		/*double GameMap::costfn(Ship *s, int to_cost,Position shipyard, Position dest, bool is_1v1) {
 
 			if (dest == shipyard) return 10000000;
 
@@ -159,7 +159,7 @@ namespace hlt {
 			}
 
 			return halite / turns;
-		}
+		}*/
 
 
 		pair<Position, double> GameMap::getMin(map<Position, double> mymap)

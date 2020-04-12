@@ -103,9 +103,9 @@ int main(int argc, char* argv[]) {
 						Position goodPos = Position(0,0);
 						while (!good)
 						{
-							auto x = std::max_element(scoreCases.begin(), scoreCases.end(),
+							auto x = std::min_element(scoreCases.begin(), scoreCases.end(),
 								[](const pair<Position, double>& p1, const pair<Position, double>& p2) {
-								return p1.second < p2.second; });
+								return p1.second > p2.second; });
 							if (usedAsObjectiv[x->first] == false) {
 								goodPos = x->first;
 								good = true;
