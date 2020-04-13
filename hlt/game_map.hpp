@@ -6,12 +6,16 @@
 #include <vector>
 #include <memory>
 #include <map>
-
+#include <queue>
+#include <limits>
+#include <cmath>
+#include <stack>
 
 using namespace std;
 
 namespace hlt {
 
+	
 
 	typedef std::vector<std::vector<int>> VVI;
 	typedef std::vector<std::vector<int>> VVI;
@@ -23,15 +27,22 @@ namespace hlt {
 		VVI turns;
 	};
 
-	typedef std::pair<Position, double> MyPairType;
-	struct CompareSecond
-	{
-		bool operator()(const MyPairType& left, const MyPairType& right) const
-		{
-			return left.second < right.second;
-		}
+	// represents a single pixel
+	struct Node {
+	public:
+		Position pos;     // index in the flattened grid
+		double cost;  // cost of traversing this pixel
 
+		Node(Position i, double c) : pos(i), cost(c) {}
 	};
+
+	inline bool operator<(const Node &n1, const Node &n2) {
+		return n1.cost > n2.cost;
+	}
+
+	inline bool operator==(const Node &n1, const Node &n2) {
+		return n1.pos == n2.pos;
+	}
 
     struct GameMap {
         int width;
@@ -115,62 +126,20 @@ namespace hlt {
 
 
 
-		double GameMap::costfn(Ship *s, int to_cost, Position shipyard, Position dest, bool is_1v1) {
-
-			if (dest == shipyard) return 10000000;
-
-			int halite = at(dest)->halite;
-			int turns_to = calculate_distance(s->position, dest);
-			int turns_back = calculate_distance(dest, shipyard);
-
-			int turns = fmax(1.0, turns_to + turns_back);
-			if (!is_1v1) {
-				turns = turns_to + turns_back;
-			}
-
-			int curr_hal = s->halite;
-			double out = -1000;
-			int mined = 0;
-			for (int i = 0; i < 5; i++) {
-				mined += halite * 0.25;
-				halite *= 0.75;
-				if (mined + curr_hal > 1000) {
-					mined = 1000 - curr_hal;
-				}
-				int c = std::max(0, mined - to_cost);
-				double cout = (c) / ((double)1 + turns + i);
-				out = std::max(cout, out);
-			}
-
-			return out;
-		}
-
-		/*double GameMap::costfn(Ship *s, int to_cost,Position shipyard, Position dest, bool is_1v1) {
-
-			if (dest == shipyard) return 10000000;
-
-			int halite = at(dest)->halite;
-			int turns_to = calculate_distance(s->position, dest);
-			int turns_back = calculate_distance(dest, shipyard);
-
-			int turns = fmax(1.0, turns_to + turns_back);
-			if (!is_1v1) {
-				turns = turns_to + turns_back;
-			}
-
-			return halite / turns;
-		}*/
+		double GameMap::costfn(Ship *s, Position shipyard, Position dest, bool is_1v1);
 
 
-		pair<Position, double> GameMap::getMin(map<Position, double> mymap)
-		{
-			pair<Position, double> min
-				= *min_element(mymap.begin(), mymap.end(), CompareSecond());
-			return min;
-		}
-		
 		
 
+
+		// weights:        flattened h x w grid of costs
+		// h, w:           height and width of grid
+		// start, goal:    index of start/goal in flattened grid
+		// diag_ok:        if true, allows diagonal moves (8-conn.)
+		// paths (output): for each node, stores previous node in path
+		
+		
+		stack<Position> Astar(unique_ptr<GameMap>& game_map, const int h, const int w, const Position start, const Position goal, std::shared_ptr<Ship> ship);
 		BFSR BFS(Position source, bool collide = false, int starting_hal = 0);
 
         void _update();

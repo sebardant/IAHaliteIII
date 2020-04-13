@@ -1,3 +1,4 @@
+
 #include "hlt/game.hpp"
 #include "hlt/constants.hpp"
 #include "hlt/log.hpp"
@@ -7,38 +8,39 @@
 #include <limits.h> 
 #include <stdio.h> 
 #include <map>
+#include <stack>
 
 using namespace std;
 using namespace hlt;
 
 int main(int argc, char* argv[]) {
-    unsigned int rng_seed;
-    if (argc > 1) {
-        rng_seed = static_cast<unsigned int>(stoul(argv[1]));
-    } else {
-        rng_seed = static_cast<unsigned int>(time(nullptr));
-    }
-    mt19937 rng(rng_seed);
+	unsigned int rng_seed;
+	if (argc > 1) {
+		rng_seed = static_cast<unsigned int>(stoul(argv[1]));
+	}
+	else {
+		rng_seed = static_cast<unsigned int>(time(nullptr));
+	}
+	mt19937 rng(rng_seed);
 
-    Game game;
-	log::log("BLAH");
+	Game game;
 	int initialHalite = 0;
-    // At this point "game" variable is populated with initial map data.
-    // This is a good place to do computationally expensive start-up pre-processing.
-    // As soon as you call "ready" function below, the 2 second per turn timer will start.
+	// At this point "game" variable is populated with initial map data.
+	// This is a good place to do computationally expensive start-up pre-processing.
+	// As soon as you call "ready" function below, the 2 second per turn timer will start.
 	for (int i = 0; i < game.game_map->height; i++)
+	{
+		for (int j = 0; j < game.game_map->width; j++)
 		{
-			for (int j = 0; j < game.game_map->width; j++)
-			{
-				MapCell cell = game.game_map->cells[i][j];
-				initialHalite += cell.halite;
-			}
-			
+			MapCell cell = game.game_map->cells[i][j];
+			initialHalite += cell.halite;
 		}
-	log::log("HALITE DE DEPART : ");
-    game.ready("MyCppBot");
+
+	}
+	game.ready("MyCppBot");
 	map<EntityId, ShipState> stateMp;
 	map<EntityId, Position> objectives;
+	map<EntityId, stack<Position>> paths;
 	map<Position, bool> usedAsObjectiv;
 
 	//Aucune des cases n'est un objectif
@@ -49,100 +51,160 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-    log::log("Successfully created bot! My Player ID is " + to_string(game.my_id) + ". Bot rng seed is " + to_string(rng_seed) + ".");
+	log::log("Successfully created bot! My Player ID is " + to_string(game.my_id) + ". Bot rng seed is " + to_string(rng_seed) + ".");
 
-    for (;;) {
-        game.update_frame();
-        shared_ptr<Player> me = game.me;
-        unique_ptr<GameMap>& game_map = game.game_map;
+	for (;;) {
+		game.update_frame();
+		shared_ptr<Player> me = game.me;
+		unique_ptr<GameMap>& game_map = game.game_map;
+
+		vector<Command> command_queue;
 		map<Position, BFSR> ship_to_dist; //des indications de distance et cout par rapport au ship
-        vector<Command> command_queue;
-		map<Position, double> scoreCases;
 		
+
 		ship_to_dist.clear();//On clear a chaque tour 
 
-	
 
-        for (const auto& ship_iterator : me->ships) {
-			scoreCases.clear();
-            shared_ptr<Ship> ship = ship_iterator.second;
-			ship_to_dist[ship->position] = game_map->BFS(ship->position);
+
+		for (const auto& ship_iterator : me->ships) {
+			shared_ptr<Ship> ship = ship_iterator.second;
+
 			EntityId id = ship->id;
 			bool justChange = false;
-			
+
 			if (!stateMp.count(id)) {
 				stateMp[id] = GATHERING;
 				justChange = true;
 			}
-
-			if(ship->position == objectives[id]) {
+			if (ship->position == objectives[id] && objectives[id] != me->shipyard->position) {
 				stateMp[id] = STILL;
 			}
 
 			if (stateMp[id] == STILL && game_map->at(ship->position)->halite == 0) {
 				stateMp[id] = GATHERING;
+				usedAsObjectiv[ship->position] = false;
 				justChange = true;
 			}
 
 			if (ship->halite >= constants::MAX_HALITE * 0.90) {
 				stateMp[id] = RETURNING;
-				usedAsObjectiv[objectives[id]] = false;
-				objectives[id] = me->shipyard->position;
+				usedAsObjectiv[ship->position] = false;
+				justChange = true;
 			}
-
-			if (ship->halite == 0) {
+			
+			if (ship->halite == 0 && ship->position == me->shipyard->position) {
 				stateMp[id] = GATHERING;
 				justChange = true;
 			}
-			map<Position, BFSR> &greedy_bfs = ship_to_dist;
 
 			switch (stateMp[id])
 			{
 				case GATHERING:
 				{
 					if (justChange) {
-						VVI &dist = greedy_bfs[ship->position].dist;
-						for (int i = 0; i < game_map->width; i++)
-						{
-							for (int y = 0; y < game_map->height; y++) {
-								auto dest = Position(i, y);
-								int net_cost_to = dist[dest.x][dest.y];
-
-								scoreCases[dest] = game_map->costfn(ship.get(), net_cost_to, me->shipyard->position, dest, true);
+						map<Position, double> scoreCases;
+						double max = 0.;
+						Position bestPos;
+						for (int i = 0; i < game_map->height; i++) {
+							for (int j = 0; j < game_map->width; j++) {
+								scoreCases[Position(i, j)] = game_map->costfn(ship.get(), me->shipyard->position, Position(i, j), true);
+								if (scoreCases[Position(i, j)] > max) {
+									if (usedAsObjectiv[Position(i, j)] == false) {
+										max = scoreCases[Position(i, j)];
+										bestPos = Position(i, j);
+									}
+								}
 							}
 						}
-						bool good = false;
-						Position goodPos = Position(0,0);
-						while (!good)
-						{
-							auto x = std::min_element(scoreCases.begin(), scoreCases.end(),
-								[](const pair<Position, double>& p1, const pair<Position, double>& p2) {
-								return p1.second > p2.second; });
-							if (usedAsObjectiv[x->first] == false) {
-								goodPos = x->first;
-								good = true;
-							}
-							else {
-								scoreCases.erase(x->first);
-							}
-						}
-						usedAsObjectiv[goodPos] = true;
-						objectives[id] = goodPos;
-						
+						objectives[id] = bestPos;
+						usedAsObjectiv[bestPos] = true;
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
 						justChange = false;
 					}
-					command_queue.push_back(ship->move(game_map->naive_navigate(ship, objectives[id])));
+					else if(paths[id].empty()){
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+					}
+
+					Direction newDir = Direction::STILL;
+					if (!paths[id].empty()) {
+						if (game_map->at(paths[id].top())->is_occupied())
+						{
+							paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+						}
+						if (!paths[id].empty()) {
+							Position nextPos = paths[id].top();
+							paths[id].pop();
+							game_map->at(nextPos)->mark_unsafe(ship);
+
+
+							if (nextPos.x < ship->position.x) {
+								newDir = Direction::WEST;
+							}
+							if (nextPos.x > ship->position.x) {
+								newDir = Direction::EAST;
+							}
+							if (nextPos.y < ship->position.y) {
+								newDir = Direction::NORTH;
+							}
+							if (nextPos.y > ship->position.y) {
+								newDir = Direction::SOUTH;
+							}
+						}
+						else {
+							justChange = true;
+						}
+					}
+					command_queue.push_back(ship->move(newDir));
 				}
 				break;
 				case STILL:
 					command_queue.push_back(ship->stay_still());
 					break;
-				case RETURNING:
-					command_queue.push_back(ship->move(game_map->naive_navigate(ship, objectives[id])));
-					break;
+				case RETURNING: 
+				{
+					if (justChange) {
+						objectives[id] = me->shipyard->position;
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+						justChange = false;
+					}
+					else if (paths[id].empty()) {
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+					}
+
+					Direction newDir = Direction::STILL;
+					if (!paths[id].empty()) {
+						if (game_map->at(paths[id].top())->is_occupied())
+						{
+							paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+						}
+						if (!paths[id].empty()) {
+							Position nextPos = paths[id].top();
+							paths[id].pop();
+							game_map->at(nextPos)->mark_unsafe(ship);
+
+
+							if (nextPos.x < ship->position.x) {
+								newDir = Direction::WEST;
+							}
+							if (nextPos.x > ship->position.x) {
+								newDir = Direction::EAST;
+							}
+							if (nextPos.y < ship->position.y) {
+								newDir = Direction::NORTH;
+							}
+							if (nextPos.y > ship->position.y) {
+								newDir = Direction::SOUTH;
+							}
+						}
+					}
+					command_queue.push_back(ship->move(newDir));
+				}
+				break;
 			}
-        }
-		
+		}
+
+
+
 		//tweakable parameter
 		int x = 0.1;
 		int y = 2;
@@ -161,9 +223,263 @@ int main(int argc, char* argv[]) {
 				}
 				thisTurnHalite += cell.halite;
 			}
+		}
+
+		if (
+			game.turn_number <= 200 &&
+			me->halite >= constants::SHIP_COST &&
+			!game_map->at(me->shipyard)->is_occupied() &&
+			(y * (thisTurnHalite - x * initialHalite) / thisTurnShips > constants::SHIP_COST)
+			)
+		{
+			command_queue.push_back(me->shipyard->spawn());
+		}
+
+
+		if (!game.end_turn(command_queue)) {
+			break;
+		}
+	}
+
+	return 0;
+}
+/*#include "hlt/game.hpp"
+#include "hlt/constants.hpp"
+#include "hlt/log.hpp"
+
+#include <random>
+#include <ctime>
+#include <limits.h> 
+#include <stdio.h> 
+#include <map>
+#include <stack>
+
+using namespace std;
+using namespace hlt;
+
+int main(int argc, char* argv[]) {
+    unsigned int rng_seed;
+    if (argc > 1) {
+        rng_seed = static_cast<unsigned int>(stoul(argv[1]));
+    } else {
+        rng_seed = static_cast<unsigned int>(time(nullptr));
+    }
+    mt19937 rng(rng_seed);
+
+    Game game;
+	int initialHalite = 0;
+    // At this point "game" variable is populated with initial map data.
+    // This is a good place to do computationally expensive start-up pre-processing.
+    // As soon as you call "ready" function below, the 2 second per turn timer will start.
+	for (int i = 0; i < game.game_map->height; i++)
+		{
+			for (int j = 0; j < game.game_map->width; j++)
+			{
+				MapCell cell = game.game_map->cells[i][j];
+				initialHalite += cell.halite;
+			}
 			
 		}
+    game.ready("MyCppBot");
+	map<EntityId, ShipState> stateMp;
+	map<EntityId, Position> objectives;
+	map<EntityId, stack<Position>> paths;
+	map<Position, bool> usedAsObjectiv;
+
+	//Aucune des cases n'est un objectif
+	for (int i = 0; i < game.game_map->height; i++)
+	{
+		for (int y = 0; y < game.game_map->width; y++) {
+			usedAsObjectiv.insert({ Position(i,y), false });
+		}
+	}
+
+    log::log("Successfully created bot! My Player ID is " + to_string(game.my_id) + ". Bot rng seed is " + to_string(rng_seed) + ".");
+
+    for (;;) {
+        game.update_frame();
+        shared_ptr<Player> me = game.me;
+        unique_ptr<GameMap>& game_map = game.game_map;
 		
+		vector<Command> command_queue;
+		map<Position, BFSR> ship_to_dist; //des indications de distance et cout par rapport au ship
+		map<Position, double> scoreCases;
+		
+		ship_to_dist.clear();//On clear a chaque tour 
+
+	
+		
+        for (const auto& ship_iterator : me->ships) {
+			scoreCases.clear();
+            shared_ptr<Ship> ship = ship_iterator.second;
+			
+			EntityId id = ship->id;
+			bool justChange = false;
+
+			if (!stateMp.count(id)) {
+				stateMp[id] = GATHERING;
+				justChange = true;
+			}
+
+			if (ship->position == objectives[id] && objectives[id] != me->shipyard->position) {
+				stateMp[id] = STILL;
+			}
+
+			if (stateMp[id] == STILL && game_map->at(ship->position)->halite == 0) {
+				stateMp[id] = GATHERING;
+				justChange = true;
+			}
+
+			if (ship->halite >= constants::MAX_HALITE * 0.90) {
+				stateMp[id] = RETURNING;
+				usedAsObjectiv[objectives[id]] = false;
+				objectives[id] = me->shipyard->position;
+				justChange = true;
+				paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+			}
+
+			if (ship->halite == 0) {
+				stateMp[id] = GATHERING;
+				justChange = true;
+			}
+		
+			switch (stateMp[id])
+			{
+				case GATHERING:
+				{
+					if (justChange) {
+						ship_to_dist[ship->position] = game_map->BFS(ship->position);
+						map<Position, BFSR> &greedy_bfs = ship_to_dist;
+						VVI &dist = greedy_bfs[ship->position].dist;
+						for (int i = 0; i < game_map->width; i++)
+						{
+							for (int y = 0; y < game_map->height; y++) {
+								auto dest = Position(i, y);
+								int net_cost_to = dist[dest.x][dest.y];
+
+								scoreCases[dest] = game_map->costfn(ship.get(), net_cost_to, me->shipyard->position, dest, true);
+							}
+						}
+						bool good = false;
+						Position goodPos = Position(0,0);
+						while (!good)
+						{
+							auto x = std::max_element(scoreCases.begin(), scoreCases.end(),
+								[](const pair<Position, double>& p1, const pair<Position, double>& p2) {
+								return p1.second < p2.second; });
+							if (usedAsObjectiv[x->first] == false) {
+								goodPos = x->first;
+								good = true;
+							}
+							else {
+								scoreCases.erase(x->first);
+							}
+						}
+						usedAsObjectiv[goodPos] = true;
+						objectives[id] = goodPos;
+						
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+						log::log("OBJECTIV SET = X: "+ to_string(objectives[id].x)+" -- Y: "+ to_string(objectives[id].y));
+						justChange = false;
+					}
+					else if (paths[id].empty()) {
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+					}
+
+					Direction newDir = Direction::STILL;
+
+					if (!paths[id].empty()) {
+						Position nextPos = paths[id].top();
+						if (game_map->at(nextPos)->is_occupied())
+						{
+							paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+							nextPos = paths[id].top();
+						}
+
+						paths[id].pop();
+						game_map->at(nextPos)->mark_unsafe(ship);
+
+
+						if (nextPos.x < ship->position.x) {
+							newDir = Direction::WEST;
+						}
+						if (nextPos.x > ship->position.x) {
+							newDir = Direction::EAST;
+						}
+						if (nextPos.y < ship->position.y) {
+							newDir = Direction::NORTH;
+						}
+						if (nextPos.y > ship->position.y) {
+							newDir = Direction::SOUTH;
+						}
+					}
+					command_queue.push_back(ship->move(newDir));
+					//command_queue.push_back(ship->move(game_map->naive_navigate(ship, objectives[id])));
+
+
+				}
+				break;
+				case STILL:
+					command_queue.push_back(ship->stay_still());
+					break;
+				case RETURNING:
+					if (paths[id].empty() && !justChange) {
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+					}
+					justChange = false;
+					Direction newDir = Direction::STILL;
+					if (!paths[id].empty()) {
+						Position nextPos = paths[id].top();
+						if (game_map->at(nextPos)->is_occupied())
+						{
+							paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+							nextPos = paths[id].top();
+						}
+
+						paths[id].pop();
+						game_map->at(nextPos)->mark_unsafe(ship);
+
+
+						if (nextPos.x < ship->position.x) {
+							newDir = Direction::WEST;
+						}
+						if (nextPos.x > ship->position.x) {
+							newDir = Direction::EAST;
+						}
+						if (nextPos.y < ship->position.y) {
+							newDir = Direction::NORTH;
+						}
+						if (nextPos.y > ship->position.y) {
+							newDir = Direction::SOUTH;
+						}
+					}
+					command_queue.push_back(ship->move(newDir));
+					//command_queue.push_back(ship->move(game_map->naive_navigate(ship, objectives[id])));
+					break;
+			}
+        }
+		
+
+		
+		//tweakable parameter
+		int x = 0.1;
+		int y = 2;
+
+		//calcule le nombre de vaisseau et d'halite sur la map
+		int thisTurnShips = 1;
+		int thisTurnHalite = 0;
+
+		for (int i = 0; i < game_map->height; i++)
+		{
+			for (int j = 0; j < game_map->width; j++)
+			{
+				MapCell cell = game_map->cells[i][j];
+				if (cell.is_occupied()) {
+					thisTurnShips += 1;
+				}
+				thisTurnHalite += cell.halite;
+			}	
+		}
 
         if (
             game.turn_number <= 200 &&
@@ -175,7 +491,7 @@ int main(int argc, char* argv[]) {
             command_queue.push_back(me->shipyard->spawn());
         }
 	
-
+		
         if (!game.end_turn(command_queue)) {
             break;
         }
@@ -183,23 +499,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-
-
-/*
-bool good = false;
-						pair<Position, double> min;
-
-						objectives[id] = min.first;
-while (!good)
-						{
-							min = game_map->getMin(scoreCases);
-							if (usedAsObjectiv[min.first] == false) {
-								good = true;
-							}
-							else {
-								scoreCases.erase(min.first);
-							}
-						}
-
-
 */
