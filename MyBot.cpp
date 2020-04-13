@@ -195,6 +195,8 @@ int main(int argc, char* argv[]) {
 							if (nextPos.y > ship->position.y) {
 								newDir = Direction::SOUTH;
 							}
+							log::log("SHIP ID= " +to_string(id) + "ACTUAL -> X: " + to_string(ship->position.x) + " Y:" + to_string(ship->position.y) + " ---- NEXT -> X: " + to_string(nextPos.x) + " Y:" + to_string(nextPos.y));// +" ---- DIRECTION = " + to_string(newDir));
+
 						}
 					}
 					command_queue.push_back(ship->move(newDir));
