@@ -64,6 +64,23 @@ int main(int argc, char* argv[]) {
 
 		ship_to_dist.clear();//On clear a chaque tour 
 
+		for (unordered_map<EntityId, std::shared_ptr<Ship>>::iterator it = me->ships.begin(); it != me->ships.end(); ++it) {
+			for (int x = -2; x < 3; x++) {
+				for (int y = -2; y < 3; y++) {
+					if (x == -2 || y == -2) {
+						MapCell* cell = game_map->at(game_map->normalize(Position(it->second->position.x + x, it->second->position.y + y)));
+						if (cell->occupied_by_not(me->id)){
+							for (int i = -1; i < 2; i++) {
+								for (int j = -1; j < 2; j++) {
+									MapCell* cell2 = game_map->at(game_map->normalize(Position(cell->position.x + i, cell->position.y + j)));
+									cell2->mark_unsafe(cell->ship);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 		/*for (int i = 0; i < game.game_map->height; i++)
 		{
 			for (int j = 0; j < game.game_map->width; j++)
@@ -150,23 +167,6 @@ int main(int argc, char* argv[]) {
 					Direction newDir = Direction::STILL;
 					if (!paths[id].empty()) {
 						Position nextPos = paths[id].top();
-						/*int dir = 0;
-						if (nextPos.x < ship->position.x) {
-							newDir = Direction::WEST;
-							dir = 1;
-						}
-						if (nextPos.x > ship->position.x) {
-							newDir = Direction::EAST;
-							dir = 2;
-						}
-						if (nextPos.y < ship->position.y) {
-							newDir = Direction::NORTH;
-							dir = 3;
-						}
-						if (nextPos.y > ship->position.y) {
-							newDir = Direction::SOUTH;
-							dir = 4;
-						}*/
 
 						auto& normalized_source = game_map->normalize(ship->position);
 						auto& normalized_destination = game_map->normalize(nextPos);

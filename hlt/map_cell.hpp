@@ -25,7 +25,7 @@ namespace hlt {
             return static_cast<bool>(ship);
         }
 
-		bool occupied_by_enemy(PlayerId id) {
+		bool occupied_by_not(PlayerId id) {
 			if (ship != nullptr)
 				return ship->owner != id;
 			return false;
