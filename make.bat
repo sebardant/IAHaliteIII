@@ -43,6 +43,7 @@ cl.exe /FeMyBot.exe /std:c++14 /O2 /MT /EHsc /I . /Fo.\obj\ ^
  .\hlt\dropoff.cpp ^
  .\hlt\game.cpp ^
  .\hlt\game_map.cpp ^
+ .\hlt\commonFunction.cpp ^
  .\hlt\log.cpp ^
  .\hlt\player.cpp ^
  .\hlt\ship.cpp ^

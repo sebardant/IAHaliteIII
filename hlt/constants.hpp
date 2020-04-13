@@ -35,5 +35,17 @@ namespace hlt {
         extern double INSPIRED_BONUS_MULTIPLIER;
         /** An inspired ship instead spends 1/X% halite to move. */
         extern int INSPIRED_MOVE_COST_RATIO;
+        /** Tweakable paramater to set when we stop considering dropoff */
+        extern double DROPOFF_TURNS;
+        /** Tweakable paramater to set when we don't have enough ship for dropoff */
+        extern int SHIPS_PER_DROPOFF;
+        /** Tweakable paramater to set minimum distance for building dropoff */
+        extern int MIN_DROPOFF_DIST;
+        /** Tweakable paramater to set minimum distance with ship for building dropoff */
+        extern int MIN_SHIP_DIST;
+        /** Tweakable paramater to set distance at wich we check nearby halite */
+        extern int NEARBY_HALITE_DIST;
+        /** Tweakable paramater to set numer of halite nearby is necessary to build dropoff */
+        extern double NEARBY_HALITE_NEEDED;
     }
 }

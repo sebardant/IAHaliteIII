@@ -2,6 +2,7 @@
 #include "hlt/game.hpp"
 #include "hlt/constants.hpp"
 #include "hlt/log.hpp"
+#include "hlt/commonFunction.hpp"
 
 #include <random>
 #include <ctime>
@@ -224,11 +225,29 @@ int main(int argc, char* argv[]) {
 					thisTurnShips += 1;
 				}
 				thisTurnHalite += cell.halite;
+				//Opération pour un dropoff, on profite du parcours de la map pour le faire ici et ne pas avoir a reparcourir la map
+				if (game.turn_number <= constants::MAX_TURNS * constants::DROPOFF_TURNS) {
+					if (me->ships.size() >= constants::SHIPS_PER_DROPOFF*(me->dropoffs.size()+1)) {
+						int distanceWithAnotherDropoff = hlt::CommonFunction::calculateDistanceWithAnotherDropoff(game_map->cells[i][j].position, me->dropoffs, game_map);
+						if (distanceWithAnotherDropoff > constants::MIN_DROPOFF_DIST) {
+							std::shared_ptr<hlt::Ship> nearestShip = hlt::CommonFunction::calculateDistanceWithShip(game_map->cells[i][j].position, me->ships, game_map);
+							if (nearestShip != nullptr) {
+								double nearbyHalite = hlt::CommonFunction::nearbyHalite(i, j, game_map);
+								if (nearbyHalite > constants::NEARBY_HALITE_NEEDED) {
+									int costOfConstruction = constants::DROPOFF_COST - game_map->cells[i][j].halite - nearestShip->halite;
+									if (me->halite > costOfConstruction) {
+										//amener a la bonne case puis faire dropoff
+										nearestShip->make_dropoff();
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 
 		if (
-			game.turn_number <= 200 &&
 			me->halite >= constants::SHIP_COST &&
 			!game_map->at(me->shipyard)->is_occupied() &&
 			(y * (thisTurnHalite - x * initialHalite) / thisTurnShips > constants::SHIP_COST)
@@ -480,7 +499,27 @@ int main(int argc, char* argv[]) {
 					thisTurnShips += 1;
 				}
 				thisTurnHalite += cell.halite;
-			}	
+				
+				//Opération pour un dropoff, on profite du parcours de la map pour le faire ici et ne pas avoir a reparcourir la map
+				if (game.turn_number <= constants::MAX_TURNS * constants::DROPOFF_TURNS) {
+					if (me->ships.size() >= constants::SHIPS_PER_DROPOFF*(me->dropoffs.size()+1)) {
+						int distanceWithAnotherDropoff = hlt::Dropoff::calculateDistanceWithAnotherDropoff(i, j, me->dropoffs);
+						if (distanceWithAnotherDropoff > constants::MIN_DROPOFF_DIST) {
+							std::shared_ptr<hlt::Ship> nearestShip = hlt::Dropoff::calculateDistanceWithShip(i, j, me->ships);
+							if (nearestShip != nullptr) {
+								double nearbyHalite = hlt::CommonFunction::nearbyHalite(i, j, game_map->cells);
+								if (nearbyHalite > constants::NEARBY_HALITE_NEEDED) {
+									int costOfConstruction = constants::DROPOFF_COST - game_map->cells[i][j].halite - nearestShip->halite;
+									if (me->halite > costOfConstruction) {
+										nearestShip->make_dropoff();
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			
 		}
 
         if (

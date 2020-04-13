@@ -21,6 +21,12 @@ namespace hlt {
         int INSPIRED_EXTRACT_RATIO;
         double INSPIRED_BONUS_MULTIPLIER;
         int INSPIRED_MOVE_COST_RATIO;
+        double DROPOFF_TURNS;
+        int SHIPS_PER_DROPOFF;
+        int MIN_DROPOFF_DIST;
+        int MIN_SHIP_DIST;
+        int NEARBY_HALITE_DIST;
+        double NEARBY_HALITE_NEEDED;
     }
 }
 
@@ -108,4 +114,10 @@ void hlt::constants::populate_constants(const std::string& string_from_engine) {
     INSPIRED_EXTRACT_RATIO = get_int(constants_map, "INSPIRED_EXTRACT_RATIO");
     INSPIRED_BONUS_MULTIPLIER = get_double(constants_map, "INSPIRED_BONUS_MULTIPLIER");
     INSPIRED_MOVE_COST_RATIO = get_int(constants_map, "INSPIRED_MOVE_COST_RATIO");
+    DROPOFF_TURNS = 0.8;
+    SHIPS_PER_DROPOFF = 13;
+    MIN_DROPOFF_DIST = 15;
+    MIN_SHIP_DIST = 5;
+    NEARBY_HALITE_DIST = 3;
+    NEARBY_HALITE_NEEDED = 500;
 }
