@@ -38,7 +38,6 @@ namespace hlt {
 		GATHERING,
 		STILL,
 		RETURNING,
-		SUPER_RETURN,
 		DROPOFF,
 	};
 }

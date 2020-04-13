@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
 	map<EntityId, Position> objectives;
 	map<EntityId, stack<Position>> paths;
 	map<Position, bool> usedAsObjectiv;
-
+	map<EntityId, Position> DropOfToBuild;
 	//Aucune des cases n'est un objectif
 	for (int i = 0; i < game.game_map->height; i++)
 	{
@@ -81,21 +81,6 @@ int main(int argc, char* argv[]) {
 				}
 			}
 		}
-		/*for (int i = 0; i < game.game_map->height; i++)
-		{
-			for (int j = 0; j < game.game_map->width; j++)
-			{
-				MapCell cell = game_map->cells[i][j];
-				if (cell.occupied_by_enemy(me->id)) {
-					for (int x = -1; x < 2; x++) {
-						for (int y = -1; y < 2; y++) {
-							MapCell* cell2 = game_map->at(game_map->normalize(Position(i + x, j + y)));
-							cell2->mark_unsafe(cell.ship);
-						}
-					}
-				}
-			}
-		}*/
 
 		for (const auto& ship_iterator : me->ships) {
 			shared_ptr<Ship> ship = ship_iterator.second;
@@ -107,6 +92,17 @@ int main(int argc, char* argv[]) {
 				stateMp[id] = GATHERING;
 				justChange = true;
 			}
+
+			if (DropOfToBuild.count(id)) {
+				stateMp[id] = DROPOFF;
+				usedAsObjectiv[objectives[id]] = false;
+				justChange = true;
+			}
+
+			if (stateMp[id] == DROPOFF && ship->position == objectives[id]) {
+				ship->make_dropoff();
+			}
+
 			if (ship->position == objectives[id] && objectives[id] != me->shipyard->position) {
 				stateMp[id] = STILL;
 			}
@@ -207,6 +203,70 @@ int main(int argc, char* argv[]) {
 				case STILL:
 					command_queue.push_back(ship->stay_still());
 					break;
+
+				case DROPOFF:
+				{
+					if (justChange) {
+						objectives[id] = DropOfToBuild[id];
+						DropOfToBuild.erase(id);
+						stack<Position>().swap(paths[id]);
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+						justChange = false;
+					}
+					else if (paths[id].empty()) {
+						stack<Position>().swap(paths[id]);
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+					}
+					else if (game_map->at(paths[id].top())->is_occupied()) {
+						stack<Position>().swap(paths[id]);
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+					}
+
+					Direction newDir = Direction::STILL;
+					if (!paths[id].empty()) {
+						if (game_map->at(paths[id].top())->is_occupied())
+						{
+							stack<Position>().swap(paths[id]);
+							paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+						}
+						if (!paths[id].empty()) {
+
+							Position nextPos = paths[id].top();
+
+							auto& normalized_source = game_map->normalize(ship->position);
+							auto& normalized_destination = game_map->normalize(nextPos);
+
+							int dx = std::abs(normalized_source.x - normalized_destination.x);
+							int dy = std::abs(normalized_source.y - normalized_destination.y);
+							int wrapped_dx = game_map->width - dx;
+							int wrapped_dy = game_map->height - dy;
+
+							std::vector<Direction> possible_moves;
+
+							if (normalized_source.x < normalized_destination.x) {
+								newDir = dx > wrapped_dx ? Direction::WEST : Direction::EAST;
+							}
+							else if (normalized_source.x > normalized_destination.x) {
+								newDir = dx < wrapped_dx ? Direction::WEST : Direction::EAST;
+							}
+
+							if (normalized_source.y < normalized_destination.y) {
+								newDir = dy > wrapped_dy ? Direction::NORTH : Direction::SOUTH;
+							}
+							else if (normalized_source.y > normalized_destination.y) {
+								newDir = dy < wrapped_dy ? Direction::NORTH : Direction::SOUTH;
+							}
+
+							log::log(" RETURNING --- SHIP ID= " + to_string(id) + " ACTUAL -> X: " + to_string(ship->position.x) + " Y:" + to_string(ship->position.y) + " ---- NEXT -> X: " + to_string(nextPos.x) + " Y:" + to_string(nextPos.y));// +" ---- DIRECTION = " + to_string(newDir));
+							if (ship->halite >= game_map->at(ship->position)->halite * 0.10) {
+								command_queue.push_back(ship->move(newDir));
+								game_map->at(nextPos)->mark_unsafe(ship);
+								paths[id].pop();
+							}
+						}
+					}
+				}
+				break;
 				case RETURNING: 
 				{
 					if (justChange) {
@@ -293,7 +353,7 @@ int main(int argc, char* argv[]) {
 				}
 				thisTurnHalite += cell.halite;
 				//Opération pour un dropoff, on profite du parcours de la map pour le faire ici et ne pas avoir a reparcourir la map
-				/*if (game.turn_number <= constants::MAX_TURNS * constants::DROPOFF_TURNS) {
+				if (game.turn_number <= constants::MAX_TURNS * constants::DROPOFF_TURNS) {
 					if (me->ships.size() >= constants::SHIPS_PER_DROPOFF*(me->dropoffs.size()+1)) {
 						int distanceWithAnotherDropoff = hlt::CommonFunction::calculateDistanceWithAnotherDropoff(game_map->cells[i][j].position, me->dropoffs, game_map);
 						if (distanceWithAnotherDropoff > constants::MIN_DROPOFF_DIST) {
@@ -303,14 +363,13 @@ int main(int argc, char* argv[]) {
 								if (nearbyHalite > constants::NEARBY_HALITE_NEEDED) {
 									int costOfConstruction = constants::DROPOFF_COST - game_map->cells[i][j].halite - nearestShip->halite;
 									if (me->halite > costOfConstruction) {
-										//amener a la bonne case puis faire dropoff
-										nearestShip->make_dropoff();
+										DropOfToBuild[nearestShip->id] = game_map->cells[i][j].position;
 									}
 								}
 							}
 						}
 					}
-				}*/
+				}
 			}
 		}
 
