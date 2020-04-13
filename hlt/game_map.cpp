@@ -92,10 +92,10 @@ std::stack<Position> hlt::GameMap::Astar(unique_ptr<GameMap>& game_map, const in
 		int row = cur.pos.y;
 		int col = cur.pos.x;
 		// check bounds and find up to eight neighbors: top to bottom, left to right
-		nbrs[0] = (row > 0) ? Position(cur.pos.x, cur.pos.y - 1) : Position(-1, -1);
-		nbrs[1] = (col > 0) ? Position(cur.pos.x - 1, cur.pos.y) : Position(-1, -1);
-		nbrs[2] = (col + 1 < w) ? Position(cur.pos.x + 1, cur.pos.y) : Position(-1, -1);
-		nbrs[3] = (row + 1 < h) ? Position(cur.pos.x , cur.pos.y + 1) : Position(-1, -1);
+		nbrs[0] = normalize(Position(cur.pos.x, cur.pos.y - 1));
+		nbrs[1] = normalize(Position(cur.pos.x - 1, cur.pos.y));
+		nbrs[2] = normalize(Position(cur.pos.x + 1, cur.pos.y));
+		nbrs[3] = normalize(Position(cur.pos.x , cur.pos.y + 1));
 
 		double heuristic_cost;
 		for (int i = 0; i < 4; ++i) {
@@ -132,8 +132,10 @@ std::stack<Position> hlt::GameMap::Astar(unique_ptr<GameMap>& game_map, const in
 
 	if (solution_found) {
 		Position path_pos = goal;
+		log::log("NEW PATH "+ to_string(ship->id));
 		while (path_pos != start) {
 			path.push(path_pos);
+			log::log(to_string(path_pos.x)+" - "+ to_string(path_pos.y));
 			path_pos = paths->operator[](path_pos);
 		}
 	}

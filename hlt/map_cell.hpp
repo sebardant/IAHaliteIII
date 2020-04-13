@@ -25,6 +25,12 @@ namespace hlt {
             return static_cast<bool>(ship);
         }
 
+		bool occupied_by_enemy(PlayerId id) {
+			if (ship != nullptr)
+				return ship->owner != id;
+			return false;
+		}
+
         bool has_structure() const {
             return static_cast<bool>(structure);
         }
