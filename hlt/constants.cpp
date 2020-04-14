@@ -27,6 +27,7 @@ namespace hlt {
         int MIN_SHIP_DIST;
         int NEARBY_HALITE_DIST;
         double NEARBY_HALITE_NEEDED;
+        double SPAWN_TURNS = 0.75;
     }
 }
 
@@ -120,4 +121,5 @@ void hlt::constants::populate_constants(const std::string& string_from_engine) {
     MIN_SHIP_DIST = 5;
     NEARBY_HALITE_DIST = 3;
     NEARBY_HALITE_NEEDED = 500;
+    SPAWN_TURNS = 0.75;
 }

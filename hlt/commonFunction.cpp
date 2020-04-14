@@ -1,5 +1,6 @@
 #include "commonFunction.hpp"
 
+//Permet de calculer la distance avec un autre dropoff
 int hlt::CommonFunction::calculateDistanceWithAnotherDropoff(hlt::Position cellPosition, std::unordered_map<hlt::EntityId, std::shared_ptr<hlt::Dropoff>> dropoffs, std::unique_ptr<hlt::GameMap> &game_map) {
     int minDistance = 9999;
     
@@ -13,6 +14,7 @@ int hlt::CommonFunction::calculateDistanceWithAnotherDropoff(hlt::Position cellP
     return minDistance;
 }
 
+//Permet de calculer la distance avec un autre vaisseau
 std::shared_ptr<hlt::Ship> hlt::CommonFunction::calculateDistanceWithShip(hlt::Position cellPosition, std::unordered_map<hlt::EntityId, std::shared_ptr<hlt::Ship>> ships, std::unique_ptr<hlt::GameMap> &game_map) {
     int minDistance = 9999;
     std::shared_ptr<hlt::Ship> nearestShip = nullptr;
@@ -31,6 +33,7 @@ std::shared_ptr<hlt::Ship> hlt::CommonFunction::calculateDistanceWithShip(hlt::P
     }
 }
 
+//Permet de calculer l'halite autour de la case x, y avec un rayon de "NEARBY_HALITE_DIST"
 double hlt::CommonFunction::nearbyHalite(int x, int y, std::unique_ptr<hlt::GameMap> &game_map) {
     double nearbyHalite = 0;
     for (int i = x-(constants::NEARBY_HALITE_DIST); i < x+(constants::NEARBY_HALITE_DIST); i++)

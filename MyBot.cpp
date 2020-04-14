@@ -335,34 +335,46 @@ int main(int argc, char* argv[]) {
 
 
 
-		//tweakable parameter
+		//Pramètre modifiable pour changer le taux de spawn
 		int x = 0.1;
 		int y = 2;
 
-		//calcule le nombre de vaisseau et d'halite sur la map
+		//stock le nombre de vaisseau et d'halite sur la map
 		int thisTurnShips = 1;
 		int thisTurnHalite = 0;
 
-		for (int i = 0; i < game_map->height; i++)
+		//calcule le nombre de vaisseau et d'halite sur la map
+		for (int i = 0; i < game_map->height; i++)	
 		{
 			for (int j = 0; j < game_map->width; j++)
 			{
 				MapCell cell = game_map->cells[i][j];
-				if (cell.is_occupied()) {
+				if (cell.is_occupied()) { //Si la case est occupé c'est qu'elle contien ou un vaisseau
 					thisTurnShips += 1;
 				}
-				thisTurnHalite += cell.halite;
+				thisTurnHalite += cell.halite; //On ajoute le nombre de halite de la case au total calculé.
+
 				//Opération pour un dropoff, on profite du parcours de la map pour le faire ici et ne pas avoir a reparcourir la map
-				if (game.turn_number <= constants::MAX_TURNS * constants::DROPOFF_TURNS) {
-					if (me->ships.size() >= constants::SHIPS_PER_DROPOFF*(me->dropoffs.size()+1)) {
+				if (game.turn_number <= constants::MAX_TURNS * constants::DROPOFF_TURNS) { // On vérifie qu'il n'est pas trop tard dans la game
+					if (me->ships.size() >= constants::SHIPS_PER_DROPOFF*(me->dropoffs.size()+1)) { //On vérifie que l'on dispose d'un nombre de vaisseau intéressant
+						
+						// On vérifie qu'il n'y a pas un autre dropoff proche
 						int distanceWithAnotherDropoff = hlt::CommonFunction::calculateDistanceWithAnotherDropoff(game_map->cells[i][j].position, me->dropoffs, game_map);
-						if (distanceWithAnotherDropoff > constants::MIN_DROPOFF_DIST) {
+						if (distanceWithAnotherDropoff > constants::MIN_DROPOFF_DIST) { // On vérifie qu'il n'y a pas un autre dropoff proche
+
+							// On cherche le vaisseau le plus proche
 							std::shared_ptr<hlt::Ship> nearestShip = hlt::CommonFunction::calculateDistanceWithShip(game_map->cells[i][j].position, me->ships, game_map);
 							if (nearestShip != nullptr) {
+
+								//On calcule l'halite proche du point potentiel pour calculer si oui ou non cette case est intéressante
 								double nearbyHalite = hlt::CommonFunction::nearbyHalite(i, j, game_map);
 								if (nearbyHalite > constants::NEARBY_HALITE_NEEDED) {
+
+									//On vérifie qu'on a l'halite nécessaire pour construire un dropoff, en soustrayant le cout du dropoff avec l'halite de la case et celle du bateau
 									int costOfConstruction = constants::DROPOFF_COST - game_map->cells[i][j].halite - nearestShip->halite;
 									if (me->halite > costOfConstruction) {
+										
+										//Tout est ok, on envois le bateau le plus proche sur la case valide pour qu'il construise un dropoff
 										DropOfToBuild[nearestShip->id] = game_map->cells[i][j].position;
 									}
 								}
@@ -373,13 +385,14 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		if (game.turn_number <= 200 &&
-			me->halite >= constants::SHIP_COST &&
-			!game_map->at(me->shipyard)->is_occupied() &&
-			(y * (thisTurnHalite - x * initialHalite) / thisTurnShips > constants::SHIP_COST)
+		//Logique de spawn
+		if (game.turn_number < constants::MAX_TURNS * constants::SPAWN_TURNS && //On vérifie qu'il n'es pas trop tard dans la game
+			me->halite >= constants::SHIP_COST && //On vérifie qu'on a l'halite nécessaire
+			!game_map->at(me->shipyard)->is_occupied() && // On vérifie que le port n'est pas occupé
+			(y * (thisTurnHalite - x * initialHalite) / thisTurnShips > constants::SHIP_COST) //On regarde en fonction de l'halite restante sur la map et du nombre de vaisseau total dans la map
 			)
 		{
-			command_queue.push_back(me->shipyard->spawn());
+			command_queue.push_back(me->shipyard->spawn()); //Tout est valide, on spawn un vaisseau
 		}
 
 

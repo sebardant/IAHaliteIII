@@ -47,5 +47,7 @@ namespace hlt {
         extern int NEARBY_HALITE_DIST;
         /** Tweakable paramater to set numer of halite nearby is necessary to build dropoff */
         extern double NEARBY_HALITE_NEEDED;
+        /** Tweakable paramater to set when we stop considering spawn */
+        extern double SPAWN_TURNS;
     }
 }
