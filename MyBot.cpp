@@ -143,9 +143,9 @@ int main(int argc, char* argv[]) {
 				{
 					/*
 					Si le ship vient tout juste de passer à GATHERING, on va faire 3 choses
-						1. Donner un score d'attractivité à chaque case de la carte (avec scoreCell() )
+						1. Donner un score d'attractivité à chaque case de la carte (avec ScoreCell() )
 						2. Choisir la case la plus attractive (celle avec le score le plus élevé)
-						3. Calculer le chemin pour accéder à cette case avec un algorithme a* (astar())
+						3. Calculer le chemin pour accéder à cette case avec un algorithme a* (Astar())
 					*/
 					if (justChange) { 
 						map<Position, double> scoreCases;
@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) {
 						Position bestPos;
 						for (int i = 0; i < game_map->height; i++) {
 							for (int j = 0; j < game_map->width; j++) {
-								scoreCases[Position(i, j)] = game_map->scoreCell(ship.get(), me->shipyard->position, Position(i, j));
+								scoreCases[Position(i, j)] = game_map->ScoreCell(ship.get(), me->shipyard->position, Position(i, j));
 								if (scoreCases[Position(i, j)] > max) {
 									if (usedAsObjectiv[Position(i, j)] == false) {
 										max = scoreCases[Position(i, j)];
@@ -165,16 +165,16 @@ int main(int argc, char* argv[]) {
 						objectives[id] = bestPos;
 						usedAsObjectiv[bestPos] = true;
 						stack<Position>().swap(paths[id]);
-						paths[id] = game_map->astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
 						justChange = false;
 					}
 					else if(paths[id].empty()){ // Dans le cas ou on ne vient pas tout juste de passer au statut GATHERING mais que notre chemin pour aller à l'objectif est vide
 						stack<Position>().swap(paths[id]);
-						paths[id] = game_map->astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);//alors on recherche un nouveau chemin
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);//alors on recherche un nouveau chemin
 					}
 					else if(game_map->at(paths[id].top())->is_occupied()){ //Si la prochaine case de notre chemin est occupé,
 						stack<Position>().swap(paths[id]);
-						paths[id] = game_map->astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);//alors on recherche un nouveau chemin
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);//alors on recherche un nouveau chemin
 					}
 
 					/*
@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
 					if (!paths[id].empty()) { // On revérifie encore que notre path n'est pas vide
 						Position nextPos = paths[id].top();// On récupère le top de notre pile de position
 						
-						newDir = game_map->directionToGo(ship->position, nextPos);//On détermine la nouvelle direction 
+						newDir = game_map->DirectionToGo(ship->position, nextPos);//On détermine la nouvelle direction 
 
 						if (ship->halite >= game_map->at(ship->position)->halite * 0.10) {//On va check si le ship possède assez d'ahlite pour se déplacer
 							command_queue.push_back(ship->move(newDir));//On push la commande 
@@ -204,7 +204,7 @@ int main(int argc, char* argv[]) {
 				{
 					/*Si le ship vient tout juste de passer à DROPOFF, on va faire 2 choses
 						1. Donner au ship comme objectif la position du dropoff correspondant
-						3. Calculer le chemin pour accéder à cette case avec un algorithme a* (astar())
+						3. Calculer le chemin pour accéder à cette case avec un algorithme a* (Astar())
 
 						Après le if(justChange) c'est à peu près la même chose que dans gathering
 					*/	
@@ -212,16 +212,16 @@ int main(int argc, char* argv[]) {
 						objectives[id] = dropOfToBuild[id];
 						dropOfToBuild.erase(id);
 						stack<Position>().swap(paths[id]);
-						paths[id] = game_map->astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
 						justChange = false;
 					}
 					else if (paths[id].empty()) {
 						stack<Position>().swap(paths[id]);
-						paths[id] = game_map->astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
 					}
 					else if (game_map->at(paths[id].top())->is_occupied()) {
 						stack<Position>().swap(paths[id]);
-						paths[id] = game_map->astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
 					}
 
 					Direction newDir = Direction::STILL;
@@ -229,13 +229,13 @@ int main(int argc, char* argv[]) {
 						if (game_map->at(paths[id].top())->is_occupied())
 						{
 							stack<Position>().swap(paths[id]);
-							paths[id] = game_map->astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+							paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
 						}
 						if (!paths[id].empty()) {
 
 							Position nextPos = paths[id].top();
 
-							newDir = game_map->directionToGo(ship->position, nextPos);
+							newDir = game_map->DirectionToGo(ship->position, nextPos);
 
 							if (ship->halite >= game_map->at(ship->position)->halite * 0.10) {
 								command_queue.push_back(ship->move(newDir));
@@ -250,13 +250,13 @@ int main(int argc, char* argv[]) {
 				{
 					/*Si le ship vient tout juste de passer à RETURNING, on va faire 2 choses
 						1. Donner au ship comme objectif la position du shipyard ou du dropOff le plus proche
-						3. Calculer le chemin pour accéder à cette case avec un algorithme a* (astar())
+						3. Calculer le chemin pour accéder à cette case avec un algorithme a* (Astar())
 
 						Après le if(justChange) c'est à peu près la même chose que dans gathering
 					*/
 					if (justChange) {
 						Position closestDropOff = me->shipyard->position;
-						std::vector<std::vector<int>> ship_to_dist = game_map->breadthFirstSearch(ship->position);
+						std::vector<std::vector<int>> ship_to_dist = game_map->BreadthFirstSearch(ship->position);
 						for (const auto& it : me->dropoffs) {
 							if (ship_to_dist[it.second->position.x][it.second->position.y] < ship_to_dist[closestDropOff.x][closestDropOff.y]) {
 								closestDropOff = it.second->position;
@@ -264,16 +264,16 @@ int main(int argc, char* argv[]) {
 						}
 						objectives[id] = closestDropOff;
 						stack<Position>().swap(paths[id]);
-						paths[id] = game_map->astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
 						justChange = false;
 					}
 					else if (paths[id].empty()) {
 						stack<Position>().swap(paths[id]);
-						paths[id] = game_map->astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
 					}
 					else if (game_map->at(paths[id].top())->is_occupied()) {
 						stack<Position>().swap(paths[id]);
-						paths[id] = game_map->astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+						paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
 					}
 					
 					Direction newDir = Direction::STILL;
@@ -281,13 +281,13 @@ int main(int argc, char* argv[]) {
 						if (game_map->at(paths[id].top())->is_occupied())
 						{
 							stack<Position>().swap(paths[id]);
-							paths[id] = game_map->astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
+							paths[id] = game_map->Astar(game_map, game_map->height, game_map->width, ship->position, objectives[id], ship);
 						}
 						if (!paths[id].empty()) {
 							
 							Position nextPos = paths[id].top();
 
-							newDir = game_map->directionToGo(ship->position, nextPos);
+							newDir = game_map->DirectionToGo(ship->position, nextPos);
 
 							if (ship->halite >= game_map->at(ship->position)->halite * 0.10) {
 								command_queue.push_back(ship->move(newDir));

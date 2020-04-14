@@ -15,7 +15,7 @@ using namespace std;
 
 namespace hlt {
 
-	//Noeud correspondant à une case dans la map pour la fonction astar()
+	//Noeud correspondant à une case dans la map pour la fonction Astar()
 	struct Node {
 	public:
 		Position pos;    
@@ -116,10 +116,10 @@ namespace hlt {
 
 		
 		
-		Direction directionToGo(Position start, Position goal);
-		double scoreCell(Ship *s, Position shipyard, Position dest);
-		stack<Position> astar(unique_ptr<GameMap>& game_map, const int h, const int w, const Position start, const Position goal, std::shared_ptr<Ship> ship);
-		std::vector<std::vector<int>> breadthFirstSearch(Position source);
+		Direction DirectionToGo(Position start, Position goal);
+		double ScoreCell(Ship *s, Position shipyard, Position dest);
+		stack<Position> Astar(unique_ptr<GameMap>& game_map, const int h, const int w, const Position start, const Position goal, std::shared_ptr<Ship> ship);
+		std::vector<std::vector<int>> BreadthFirstSearch(Position source);
 
         void _update();
         static std::unique_ptr<GameMap> _generate();

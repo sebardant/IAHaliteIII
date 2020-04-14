@@ -6,7 +6,7 @@ using namespace std;
 using namespace hlt;
 
 //Fonction permettant de choisir la direction à prendre pour aller d'une destination à une autre.
-Direction  GameMap::directionToGo(Position start, Position goal) {
+Direction  GameMap::DirectionToGo(Position start, Position goal) {
 	Direction newDir;
 	auto& normalized_source = normalize(start);
 	auto& normalized_destination = normalize(goal);
@@ -36,7 +36,7 @@ Direction  GameMap::directionToGo(Position start, Position goal) {
 /*Fonction permettant de terminer le score d'attractivité d'une case. On fait un simple ratio halite / tours pour y accéder. Ce n'est pas la façon la plus précise.
  Plus le score est élevé, mieux c'est.
 */
-double GameMap::scoreCell(Ship *s, Position shipyard, Position goal) {
+double GameMap::ScoreCell(Ship *s, Position shipyard, Position goal) {
 
 	if (goal == shipyard) return 0;
 
@@ -62,7 +62,7 @@ game_map: map de la partie
 
 		start: https://github.com/hjweide/a-star/blob/master/astar.cpp
 */
-std::stack<Position> hlt::GameMap::astar(unique_ptr<GameMap>& game_map, const int h, const int w, const Position start, const Position goal, std::shared_ptr<Ship> ship) {
+std::stack<Position> hlt::GameMap::Astar(unique_ptr<GameMap>& game_map, const int h, const int w, const Position start, const Position goal, std::shared_ptr<Ship> ship) {
 
 	const double INF = std::numeric_limits<double>::infinity();
 	int lim = 5;
@@ -113,12 +113,12 @@ std::stack<Position> hlt::GameMap::astar(unique_ptr<GameMap>& game_map, const in
 				double new_cost = costs->operator[](cur.pos) + (game_map->at(nbrs[i])->halite * 0.10 >=1 ? game_map->at(nbrs[i])->halite * 0.10 : 1);
 				if (new_cost < costs->operator[](nbrs[i])) {
 					
-					//Pour le calcul de l'heureistique, je ne peux pas utiliser le breadthFirstSearch sur une map de plus de 32 car sinon le nombre de case est trop important et le tour risque de faire plus de 2sec.
+					//Pour le calcul de l'heureistique, je ne peux pas utiliser le BreadthFirstSearch sur une map de plus de 32 car sinon le nombre de case est trop important et le tour risque de faire plus de 2sec.
 					if (height > 32) {
 						heuristic_cost = calculate_distance(nbrs[i], goal);
 					}
 					else {
-						std::vector<std::vector<int>> ship_to_dist = game_map->breadthFirstSearch(nbrs[i]);
+						std::vector<std::vector<int>> ship_to_dist = game_map->BreadthFirstSearch(nbrs[i]);
 						heuristic_cost = ship_to_dist[goal.x][goal.y];
 					}
 
@@ -156,7 +156,7 @@ game_map: map de la partie
 
 		Source: https://github.com/aidenbenner/halite3/blob/master/hlt/game_map.cpp (BFS)
 */
-std::vector<std::vector<int>> hlt::GameMap::breadthFirstSearch(Position start) {	
+std::vector<std::vector<int>> hlt::GameMap::BreadthFirstSearch(Position start) {	
 	for (int i = 0; i < 64; i++) {
 		for (int k = 0; k < 64; k++) {
 			visited[i][k] = false;
