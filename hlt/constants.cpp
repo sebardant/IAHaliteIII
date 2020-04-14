@@ -121,5 +121,5 @@ void hlt::constants::populate_constants(const std::string& string_from_engine) {
     MIN_SHIP_DIST = 5;
     NEARBY_HALITE_DIST = 3;
     NEARBY_HALITE_NEEDED = 500;
-    SPAWN_TURNS = 0.75;
+    SPAWN_TURNS = 0.45;
 }

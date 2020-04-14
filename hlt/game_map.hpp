@@ -15,29 +15,16 @@ using namespace std;
 
 namespace hlt {
 
-	
-
-	typedef std::vector<std::vector<int>> VVI;
-	typedef std::vector<std::vector<int>> VVI;
-	typedef std::vector<std::vector<Position>> VVP;
-
-	struct BFSR {
-		VVI dist;
-		VVP parent;
-		VVI turns;
-	};
-
-	// represents a single pixel
 	struct Node {
 	public:
 		Position pos;     // index in the flattened grid
-		double cost;  // cost of traversing this pixel
+		double heuristic;  // cost of traversing this pixel
 
-		Node(Position i, double c) : pos(i), cost(c) {}
+		Node(Position i, double c) : pos(i), heuristic(c) {}
 	};
 
 	inline bool operator<(const Node &n1, const Node &n2) {
-		return n1.cost > n2.cost;
+		return n1.heuristic > n2.heuristic;
 	}
 
 	inline bool operator==(const Node &n1, const Node &n2) {
@@ -140,7 +127,7 @@ namespace hlt {
 		
 		
 		stack<Position> Astar(unique_ptr<GameMap>& game_map, const int h, const int w, const Position start, const Position goal, std::shared_ptr<Ship> ship);
-		BFSR BFS(Position source, bool collide = false, int starting_hal = 0);
+		std::vector<std::vector<int>> BFS(Position source, bool collide = false, int starting_hal = 0);
 
         void _update();
         static std::unique_ptr<GameMap> _generate();
