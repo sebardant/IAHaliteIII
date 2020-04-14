@@ -5,25 +5,64 @@
 using namespace std;
 using namespace hlt;
 
+//Fonction permettant de choisir la direction à prendre pour aller d'une destination à une autre.
+Direction  GameMap::directionToGo(Position start, Position goal) {
+	Direction newDir;
+	auto& normalized_source = normalize(start);
+	auto& normalized_destination = normalize(goal);
 
-double GameMap::costfn(Ship *s, Position shipyard, Position dest, bool is_1v1) {
+	int dx = std::abs(normalized_source.x - normalized_destination.x);
+	int dy = std::abs(normalized_source.y - normalized_destination.y);
+	int wrapped_dx = width - dx;
+	int wrapped_dy = height - dy;
 
-	if (dest == shipyard) return 0;
-
-	int halite = at(dest)->halite;
-	int turns_to = calculate_distance(s->position, dest);
-	int turns_back = calculate_distance(dest, shipyard);
-
-	int turns = fmax(1.0, turns_to + turns_back);
-	if (!is_1v1) {
-		turns = turns_to + turns_back;
+	if (normalized_source.x < normalized_destination.x) {
+		newDir = dx > wrapped_dx ? Direction::WEST : Direction::EAST;
 	}
+	else if (normalized_source.x > normalized_destination.x) {
+		newDir = dx < wrapped_dx ? Direction::WEST : Direction::EAST;
+	}
+
+	if (normalized_source.y < normalized_destination.y) {
+		newDir = dy > wrapped_dy ? Direction::NORTH : Direction::SOUTH;
+	}
+	else if (normalized_source.y > normalized_destination.y) {
+		newDir = dy < wrapped_dy ? Direction::NORTH : Direction::SOUTH;
+	}
+
+	return newDir;
+}
+
+/*Fonction permettant de terminer le score d'attractivité d'une case. On fait un simple ratio halite / tours pour y accéder. Ce n'est pas la façon la plus précise.
+ Plus le score est élevé, mieux c'est.
+*/
+double GameMap::scoreCell(Ship *s, Position shipyard, Position goal) {
+
+	if (goal == shipyard) return 0;
+
+	int halite = at(goal)->halite;
+	int turns_to = calculate_distance(s->position, goal);
+	int turns_back = calculate_distance(goal, shipyard);
+
+	int turns = turns_to + turns_back;
 	turns = turns_to + turns_back;
 
 	return halite / turns;
 }
-		
-std::stack<Position> hlt::GameMap::Astar(unique_ptr<GameMap>& game_map, const int h, const int w, const Position start, const Position goal, std::shared_ptr<Ship> ship) {
+/*
+Cette fonction nous permet de calculer le meilleur chemin (le moins cher en ressource et le plus court possible) avec un algorithme a*
+game_map: map de la partie
+		h: hauteur de la map
+		w: largeur de la map
+		start: Position de départ
+		goal: position à atteindre
+		ship: ship voulant se déplacer
+
+		retourne une pile avec le chemin demandé
+
+		start: https://github.com/hjweide/a-star/blob/master/astar.cpp
+*/
+std::stack<Position> hlt::GameMap::astar(unique_ptr<GameMap>& game_map, const int h, const int w, const Position start, const Position goal, std::shared_ptr<Ship> ship) {
 
 	const double INF = std::numeric_limits<double>::infinity();
 	int lim = 5;
@@ -47,7 +86,6 @@ std::stack<Position> hlt::GameMap::Astar(unique_ptr<GameMap>& game_map, const in
 
 	bool solution_found = false;
 	while (!nodes_to_visit.empty()) {
-		// .top() doesn't actually remove the node
 		Node cur = nodes_to_visit.top();
 
 		if (cur == goal_node) {
@@ -59,7 +97,7 @@ std::stack<Position> hlt::GameMap::Astar(unique_ptr<GameMap>& game_map, const in
 
 		int row = cur.pos.y;
 		int col = cur.pos.x;
-		// check bounds and find up to eight neighbors: top to bottom, left to right
+
 		nbrs[0] = normalize(Position(cur.pos.x, cur.pos.y - 1));
 		nbrs[1] = normalize(Position(cur.pos.x - 1, cur.pos.y));
 		nbrs[2] = normalize(Position(cur.pos.x + 1, cur.pos.y));
@@ -72,19 +110,18 @@ std::stack<Position> hlt::GameMap::Astar(unique_ptr<GameMap>& game_map, const in
 					compteur++;
 					continue;
 				}
-				// the sum of the cost so far and the cost of this move
 				double new_cost = costs->operator[](cur.pos) + (game_map->at(nbrs[i])->halite * 0.10 >=1 ? game_map->at(nbrs[i])->halite * 0.10 : 1);
-				//double new_cost = costs->operator[](cur.pos) + game_map->at(nbrs[i])->halite * 0.10;
 				if (new_cost < costs->operator[](nbrs[i])) {
+					
+					//Pour le calcul de l'heureistique, je ne peux pas utiliser le breadthFirstSearch sur une map de plus de 32 car sinon le nombre de case est trop important et le tour risque de faire plus de 2sec.
 					if (height > 32) {
 						heuristic_cost = calculate_distance(nbrs[i], goal);
 					}
 					else {
-						std::vector<std::vector<int>> ship_to_dist = game_map->BFS(nbrs[i]);
+						std::vector<std::vector<int>> ship_to_dist = game_map->breadthFirstSearch(nbrs[i]);
 						heuristic_cost = ship_to_dist[goal.x][goal.y];
 					}
 
-					//paths with lower expected cost are explored first
 					double priority = new_cost + heuristic_cost;
 					nodes_to_visit.push(Node(nbrs[i], priority));
 
@@ -98,6 +135,7 @@ std::stack<Position> hlt::GameMap::Astar(unique_ptr<GameMap>& game_map, const in
 	delete[] nbrs;
 	stack<Position> path;
 	
+	// Ici on rempli la pile qui contiendra tout le chemin voulu
 	if (solution_found) {
 		Position path_pos = goal;
 		while (path_pos != start) {
@@ -108,11 +146,17 @@ std::stack<Position> hlt::GameMap::Astar(unique_ptr<GameMap>& game_map, const in
 	return path;
 }
 
-
 static bool visited[64][64];
-std::vector<std::vector<int>> hlt::GameMap::BFS(Position source, bool collide, int starting_hal) {
-	// dfs out of source to the entire map
-	
+/*
+Cette fonction nous permet de calculer le cout d'acces de toute les case de la carte depuis une position.
+game_map: map de la partie
+		start: hauteur de la map
+
+		retourne un double vector correspondant à la map avec le cout d'accès de chaque cas
+
+		Source: https://github.com/aidenbenner/halite3/blob/master/hlt/game_map.cpp (BFS)
+*/
+std::vector<std::vector<int>> hlt::GameMap::breadthFirstSearch(Position start) {	
 	for (int i = 0; i < 64; i++) {
 		for (int k = 0; k < 64; k++) {
 			visited[i][k] = false;
@@ -122,13 +166,13 @@ std::vector<std::vector<int>> hlt::GameMap::BFS(Position source, bool collide, i
 	int def = 1e8;
 	
 	vector<vector<int>> dist(width, vector<int>(height, def));	
-	dist[source.x][source.y] = 0;
+	dist[start.x][start.y] = 0;
 
 	vector<Position> frontier;
 	vector<Position> next;
 	next.reserve(200);
 	frontier.reserve(200);
-	next.push_back(source);
+	next.push_back(start);
 	while (!next.empty()) {
 		std::swap(next, frontier);
 		next.clear();
@@ -176,7 +220,6 @@ void hlt::GameMap::_update() {
         cells[y][x].halite = halite;
     }
 }
-
 
 std::unique_ptr<hlt::GameMap> hlt::GameMap::_generate() {
     std::unique_ptr<hlt::GameMap> map = std::make_unique<GameMap>();

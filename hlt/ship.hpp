@@ -34,10 +34,11 @@ namespace hlt {
         static std::shared_ptr<Ship> _generate(PlayerId player_id);
     };
 
+	//différent état
 	enum ShipState {
-		GATHERING,
-		STILL,
-		RETURNING,
-		DROPOFF,
+		GATHERING, //Etat de récolte, plus précisement de déplacement pour atteindre une nouvelle case à miner
+		MINE, //Etat de minage
+		RETURNING, //Retorune à la case shipyard ou dropoff la plus proche
+		DROPOFF, //se déplace pour se transformer en dropOff
 	};
 }

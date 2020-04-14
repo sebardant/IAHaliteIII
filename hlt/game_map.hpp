@@ -15,10 +15,11 @@ using namespace std;
 
 namespace hlt {
 
+	//Noeud correspondant à une case dans la map pour la fonction astar()
 	struct Node {
 	public:
-		Position pos;     // index in the flattened grid
-		double heuristic;  // cost of traversing this pixel
+		Position pos;    
+		double heuristic;  
 
 		Node(Position i, double c) : pos(i), heuristic(c) {}
 	};
@@ -113,21 +114,12 @@ namespace hlt {
 
 
 
-		double GameMap::costfn(Ship *s, Position shipyard, Position dest, bool is_1v1);
-
-
-		
-
-
-		// weights:        flattened h x w grid of costs
-		// h, w:           height and width of grid
-		// start, goal:    index of start/goal in flattened grid
-		// diag_ok:        if true, allows diagonal moves (8-conn.)
-		// paths (output): for each node, stores previous node in path
 		
 		
-		stack<Position> Astar(unique_ptr<GameMap>& game_map, const int h, const int w, const Position start, const Position goal, std::shared_ptr<Ship> ship);
-		std::vector<std::vector<int>> BFS(Position source, bool collide = false, int starting_hal = 0);
+		Direction directionToGo(Position start, Position goal);
+		double scoreCell(Ship *s, Position shipyard, Position dest);
+		stack<Position> astar(unique_ptr<GameMap>& game_map, const int h, const int w, const Position start, const Position goal, std::shared_ptr<Ship> ship);
+		std::vector<std::vector<int>> breadthFirstSearch(Position source);
 
         void _update();
         static std::unique_ptr<GameMap> _generate();
